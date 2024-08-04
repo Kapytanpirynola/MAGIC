@@ -1,0 +1,13 @@
+/* Header.css */
+
+.banner {
+    background-image: url('../../public/images/fotos-de-salas-de-estilo-moderno-en-beige-de-invelo.webp'); /* Ruta relativa a la carpeta de imágenes */
+    background-size: cover; /* Ajusta la imagen para cubrir todo el fondo */
+    background-position: center; /* Centra la imagen */
+    height: 600px; /* Altura del banner, ajusta según tus necesidades */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white; /* Color del texto sobre la imagen */
+    text-align: center; /* Alineación del texto */
+}  
