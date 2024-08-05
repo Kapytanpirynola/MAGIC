@@ -1,155 +1,209 @@
+// src/components/Dash.jsx
 import React, { useEffect, useState } from 'react';
-import ReactApexChart from 'react-apexcharts';
-import moment from 'moment';
-
-const trigoStrength = 3; // Factor de ajuste para la función seno
-let iteration = 11; // Contador para la generación de datos
-
-// Genera una serie de tiempo con datos cada 5 minutos, basados en una función trigonométrica
-const generateMinuteWiseTimeSeries = (baseval, count, yrange) => {
-  let i = 0;
-  let series = [];
-  while (i < count) {
-    let x = baseval; // Tiempo en milisegundos
-    let y = (Math.sin(i / trigoStrength) * (i / trigoStrength) + i / trigoStrength + 1) * (trigoStrength * 2); // Valor generado
-    series.push({ x, y }); // Agrega el par {x, y} a la serie
-    baseval += 300000; // Incrementa el tiempo en 5 minutos (300,000 ms)
-    i++;
-  }
-  return series; // Devuelve la serie generada
-};
-
-// Genera un número aleatorio dentro de un rango dado
-const getRangeRandom = (yrange) => {
-  return Math.floor(Math.random() * (yrange.max - yrange.min + 1)) + yrange.min;
-};
-
-// Genera un valor aleatorio basado en una función trigonométrica
-const getRandom = () => {
-  const i = iteration;
-  return (Math.sin(i / trigoStrength) * (i / trigoStrength) + i / trigoStrength + 1) * (trigoStrength * 2);
-};
+import { Line } from 'react-chartjs-2';
+import { db } from '../firebase'; 
+import { collection, getDocs } from 'firebase/firestore';
+import Footer from '../components/Footer';
+import Chart from 'chart.js/auto';
+import '../styles/Dash.css';
+import HeaderDash from '../components/HeaderDash';
 
 const Dash = () => {
-  // Estado para las opciones del gráfico de columnas
-  const [optionsColumn, setOptionsColumn] = useState({
-    chart: {
-      height: 200,
-      type: 'bar',
-      animations: {
-        enabled: false, // Desactiva las animaciones
-      },
-      toolbar: {
-        show: false, // Oculta la barra de herramientas
-      },
-      zoom: {
-        enabled: false, // Desactiva el zoom
-      },
-    },
-    dataLabels: {
-      enabled: false, // Desactiva las etiquetas de datos
-    },
-    stroke: {
-      width: 0, // Sin borde en las columnas
-    },
-    series: [
-      {
-        name: 'Load Average', // Nombre de la serie
-        data: generateMinuteWiseTimeSeries(new Date('12/12/2016 00:20:00').getTime(), 12, { min: 10, max: 110 }),
-      },
-    ],
-    xaxis: {
-      type: 'datetime', // Eje X como serie de tiempo
-      range: 2700000, // Rango de 45 minutos
-    },
-  });
 
-  // Estado para las opciones del gráfico de líneas
-  const [optionsLine, setOptionsLine] = useState({
-    chart: {
-      height: 200,
-      type: 'line',
-      stacked: true, // Gráficos apilados
-      animations: {
-        enabled: true, // Activa las animaciones
-        easing: 'linear',
-        dynamicAnimation: {
-          speed: 1000, // Velocidad de la animación
-        },
-      },
-      toolbar: {
-        show: false, // Oculta la barra de herramientas
-      },
-      zoom: {
-        enabled: false, // Desactiva el zoom
-      },
-    },
-    dataLabels: {
-      enabled: false, // Desactiva las etiquetas de datos
-    },
-    stroke: {
-      curve: 'straight', // Línea recta
-      width: 5, // Ancho de la línea
-    },
-    series: [
-      {
-        name: 'Running', // Nombre de la serie
-        data: generateMinuteWiseTimeSeries(new Date('12/12/2016 00:20:00').getTime(), 12, { min: 30, max: 110 }),
-      },
-      {
-        name: 'Waiting', // Nombre de la serie
-        data: generateMinuteWiseTimeSeries(new Date('12/12/2016 00:20:00').getTime(), 12, { min: 30, max: 110 }),
-      },
-    ],
-    xaxis: {
-      type: 'datetime', // Eje X como serie de tiempo
-      range: 45, // Rango en unidades de tiempo
-    },
+  // Estado para almacenar los datos de la gráfica
+  const [chartData, setChartData] = useState({
+    labels: [],
+    datasets: []
   });
+  
+  // Estados para almacenar los datos de las tablas
+  const [temperatureData, setTemperatureData] = useState([]);
+  const [humidityData, setHumidityData] = useState([]);
 
-  // useEffect se ejecuta al montar el componente y configura un intervalo para actualizar los datos
+  // Estado para controlar si las gráficas están "apagadas"
+  const [isGraphsInactive, setIsGraphsInactive] = useState(false);
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      iteration++; // Incrementa el contador de iteración
-      const newDataColumn = optionsColumn.series[0].data.slice();
-      newDataColumn.push({ x: newDataColumn[newDataColumn.length - 1].x + 300000, y: getRandom() }); // Agrega un nuevo dato al final
-      newDataColumn.shift(); // Elimina el primer dato
+    const fetchData = async () => {
+      try {
+        // Obtener datos de Firestore
+        const dataCollection = collection(db, 'dailyRecords');
+        const dataSnapshot = await getDocs(dataCollection);
+        const dataList = dataSnapshot.docs.map(doc => doc.data());
 
-      const newDataLine1 = optionsLine.series[0].data.slice();
-      const newDataLine2 = optionsLine.series[1].data.slice();
-      newDataLine1.push({ x: newDataLine1[newDataLine1.length - 1].x + 300000, y: getRandom() }); // Agrega un nuevo dato al final para la primera serie
-      newDataLine2.push({ x: newDataLine2[newDataLine2.length - 1].x + 300000, y: getRandom() }); // Agrega un nuevo dato al final para la segunda serie
-      newDataLine1.shift(); // Elimina el primer dato
-      newDataLine2.shift(); // Elimina el primer dato
+        if (dataList.length > 0) {
+          const dates = dataList.map(data => data.date || 'Unknown Date');
+          const avgTemp = dataList.map(data => data.avgTemp || 0);
+          const avgHumi = dataList.map(data => data.avgHumi || 0);
+          const maxTemp = dataList.map(data => data.maxTemp || 0);
+          const maxHumi = dataList.map(data => data.maxHumi || 0);
+          const minTemp = dataList.map(data => data.minTemp || 0);
+          const minHumi = dataList.map(data => data.minHumi || 0);
 
-      // Actualiza el estado del gráfico de columnas
-      setOptionsColumn((prev) => ({
-        ...prev,
-        series: [{ ...prev.series[0], data: newDataColumn }],
-      }));
+          // Configurar datos para las gráficas
+          setChartData({
+            labels: dates,
+            datasets: [
+              {
+                label: 'Average Temperature',
+                data: avgTemp,
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1,
+                fill: false,
+              },
+              {
+                label: 'Average Humidity',
+                data: avgHumi,
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                fill: false,
+              },
+              {
+                label: 'Max Temperature',
+                data: maxTemp,
+                borderColor: 'rgba(255, 159, 64, 1)',
+                borderWidth: 1,
+                fill: false,
+              },
+              {
+                label: 'Max Humidity',
+                data: maxHumi,
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+                fill: false,
+              },
+              {
+                label: 'Min Temperature',
+                data: minTemp,
+                borderColor: 'rgba(153, 102, 255, 1)',
+                borderWidth: 1,
+                fill: false,
+              },
+              {
+                label: 'Min Humidity',
+                data: minHumi,
+                borderColor: 'rgba(255, 206, 86, 1)',
+                borderWidth: 1,
+                fill: false,
+              },
+            ],
+          });
 
-      // Actualiza el estado del gráfico de líneas
-      setOptionsLine((prev) => ({
-        ...prev,
-        series: [
-          { ...prev.series[0], data: newDataLine1 },
-          { ...prev.series[1], data: newDataLine2 },
-        ],
-      }));
-    }, 3000); // Intervalo de 3 segundos para la actualización
+          // Preparar datos para las tablas
+          setTemperatureData(dataList.map(data => ({
+            date: data.date || 'Unknown Date',
+            avgTemp: data.avgTemp || 0,
+            maxTemp: data.maxTemp || 0,
+            minTemp: data.minTemp || 0,
+          })));
 
-    return () => clearInterval(interval); // Limpia el intervalo al desmontar el componente
-  }, [optionsColumn, optionsLine]);
+          setHumidityData(dataList.map(data => ({
+            date: data.date || 'Unknown Date',
+            avgHumi: data.avgHumi || 0,
+            maxHumi: data.maxHumi || 0,
+            minHumi: data.minHumi || 0,
+          })));
+        } else {
+          setChartData({ labels: [], datasets: [] });
+          setTemperatureData([]);
+          setHumidityData([]);
+        }
+      } catch (error) {
+        console.error("Error fetching data: ", error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
-    <div style={{ background: '#1B213B', padding: '20px' }}>
-      <div style={{ marginBottom: '20px' }}>
-        <ReactApexChart options={optionsColumn} series={optionsColumn.series} type="bar" height={200} />
+    <>
+      <HeaderDash/>
+      <div className="dashboard-container">
+        <h2>Weather Dashboard</h2>
+
+        {/* Gráfica y Tabla de Temperatura */}
+        <div className="chart-table-container">
+          {/* Gráfica de Temperatura */}
+          <div className={`chart-box ${isGraphsInactive ? 'inactive' : ''}`}>
+            <h3 className="chart-title">Temperature Data</h3>
+            <Line data={{
+              labels: chartData.labels,
+              datasets: chartData.datasets.filter(ds => ds.label.includes('Temperature'))
+            }} options={{
+              maintainAspectRatio: false, 
+              responsive: true,
+            }} />
+          </div>
+
+          {/* Tabla de Temperatura */}
+          <div className="data-table-container">
+            <h3>Temperature Data</h3>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Average Temp</th>
+                  <th>Max Temp</th>
+                  <th>Min Temp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {temperatureData.map((data, index) => (
+                  <tr key={index}>
+                    <td>{data.date}</td>
+                    <td>{data.avgTemp}°C</td>
+                    <td>{data.maxTemp}°C</td>
+                    <td>{data.minTemp}°C</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Gráfica y Tabla de Humedad */}
+        <div className="chart-table-container">
+          {/* Gráfica de Humedad */}
+          <div className={`chart-box ${isGraphsInactive ? 'inactive' : ''}`}>
+            <h3 className="chart-title">Humidity Data</h3>
+            <Line data={{
+              labels: chartData.labels,
+              datasets: chartData.datasets.filter(ds => ds.label.includes('Humidity'))
+            }} options={{
+              maintainAspectRatio: false, 
+              responsive: true,
+            }} />
+          </div>
+
+          {/* Tabla de Humedad */}
+          <div className="data-table-container">
+            <h3>Humidity Data</h3>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Average Humidity</th>
+                  <th>Max Humidity</th>
+                  <th>Min Humidity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {humidityData.map((data, index) => (
+                  <tr key={index}>
+                    <td>{data.date}</td>
+                    <td>{data.avgHumi}%</td>
+                    <td>{data.maxHumi}%</td>
+                    <td>{data.minHumi}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <div style={{ marginBottom: '20px' }}>
-        <ReactApexChart options={optionsLine} series={optionsLine.series} type="line" height={200} />
-      </div>
-    </div>
+      <Footer />
+    </>
   );
 };
 
