@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import Chart from 'chart.js/auto';
 import '../styles/Dash.css';
 import HeaderDash from '../components/HeaderDash';
+import DashRealTime from './DashRealTime';
 
 const Dash = () => {
 
@@ -119,6 +120,7 @@ const Dash = () => {
   return (
     <>
       <HeaderDash/>
+      <DashRealTime/>
       <div className="dashboard-container">
         <h2>Weather Dashboard</h2>
 
