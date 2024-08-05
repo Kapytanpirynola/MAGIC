@@ -78,7 +78,6 @@ const DashRealTime = () => {
 
   return (
     <>
-      <HeaderDash />
       <div className="dashboard-container">
         <h2 className="dashboard-title">Weather Dashboard</h2>
 
