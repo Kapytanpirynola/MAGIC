@@ -7,7 +7,12 @@
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "chart.js": "^4.4.3",
+<<<<<<< HEAD
     "firebase": "^10.12.2",
+=======
+    "chartjs": "^0.3.24",
+    "firebase": "^10.12.5",
+>>>>>>> a165b13ceb90c5878a0e35b7b2dcae7f985efe83
     "moment": "^2.30.1",
     "react": "^18.3.1",
     "react-apexcharts": "^1.4.1",

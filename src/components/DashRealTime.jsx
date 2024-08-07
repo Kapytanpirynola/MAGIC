@@ -145,4 +145,8 @@ const DashRealTime = () => {
   );
 };
 
+<<<<<<< HEAD
 export default DashRealTime;
+=======
+export default DashRealTime;
+>>>>>>> a165b13ceb90c5878a0e35b7b2dcae7f985efe83

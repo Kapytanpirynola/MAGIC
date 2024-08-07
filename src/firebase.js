@@ -25,4 +25,7 @@ const analytics = getAnalytics(app); // Analytics
 const realtimeDb = getDatabase(app); // Realtime Database
 
 export { app, db, auth, analytics, realtimeDb, ref, onValue };
+<<<<<<< HEAD
 
+=======
+>>>>>>> a165b13ceb90c5878a0e35b7b2dcae7f985efe83
